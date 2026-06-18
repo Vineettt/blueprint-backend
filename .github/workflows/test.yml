@@ -1,0 +1,181 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.33.4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm test:run
+        env:
+          NODE_ENV: test
+          DB_AUTH_URL: sqlite:./test-auth.db
+          DB_PBAC_URL: sqlite:./test-pbac.db
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+
+      - name: Generate coverage report
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: blueprint_pbac
+          POSTGRES_USER: blueprint
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U blueprint -d blueprint_pbac"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.33.4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup test databases
+        run: |
+          pnpm db:migrate:auth
+          pnpm db:migrate:pbac
+        env:
+          DB_AUTH_URL: sqlite:./test-auth.db
+          DB_PBAC_URL: postgresql://blueprint:test_password@localhost:5432/blueprint_pbac
+
+      - name: Run integration tests
+        run: pnpm test:integration
+        env:
+          NODE_ENV: test
+          DB_AUTH_URL: sqlite:./test-auth.db
+          DB_PBAC_URL: postgresql://blueprint:test_password@localhost:5432/blueprint_pbac
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: github.event_name == 'push'
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: blueprint_pbac
+          POSTGRES_USER: blueprint
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U blueprint -d blueprint_pbac"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.33.4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start application
+        run: |
+          pnpm build
+          pnpm start &
+          sleep 10
+        env:
+          NODE_ENV: test
+          DB_AUTH_URL: sqlite:./test-auth.db
+          DB_PBAC_URL: postgresql://blueprint:test_password@localhost:5432/blueprint_pbac
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+          PORT: 3000
+
+      - name: Run performance tests
+        run: |
+          echo "🚀 Running performance tests..."
+          # Add your performance test commands here
+          # Example: artillery run performance-test.yml
+          # Example: k6 run performance-test.js
+
+      - name: Load test results
+        run: |
+          echo "📊 Generating performance report..."
+          # Add performance reporting commands here

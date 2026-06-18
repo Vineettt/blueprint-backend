@@ -1,0 +1,8 @@
+pre-commit:
+  commands:
+    - id: check-workflow-comments
+      name: Check workflow comments
+      entry: .husky/pre-commit
+      language: script
+      files: '\.github/workflows/*.yml'
+      pass: true

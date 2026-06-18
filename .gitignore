@@ -1,0 +1,20 @@
+node_modules
+dist
+.env
+*.log
+.DS_Store
+coverage
+.nyc_output
+logs/
+*.tsbuildinfo
+# FastAPI Embedding
+apps/embedding/.venv/
+apps/embedding/**pycache**/
+apps/embedding/**/*.pyc
+apps/embedding/.pytest_cache/
+apps/embedding/.mypy_cache/
+apps/embedding/.ruff_cache/
+apps/embedding/.coverage
+apps/embedding/models/
+apps/embedding/cache/
+

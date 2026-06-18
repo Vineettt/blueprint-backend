@@ -1,0 +1,80 @@
+#!/bin/sh
+
+# Pre-commit hook for blueprint API
+# Runs linting, formatting, and build checks
+
+set -e
+
+# Start timer
+start_time=$(date +%s)
+
+echo "🔍 Pre-commit checks running..." >&2
+echo "" >&2
+
+total_stages=4
+current_stage=0
+
+# Run TypeScript check
+current_stage=$((current_stage + 1))
+echo "" >&2
+echo "🔍 Stage $current_stage/$total_stages: Running TypeScript check..." >&2
+stage_start=$(date +%s)
+if ! pnpm -r tsc --noEmit >&2; then
+    echo "❌ TypeScript check failed!" >&2
+    echo "Please fix TypeScript errors before committing." >&2
+    exit 1
+fi
+stage_end=$(date +%s)
+stage_duration=$((stage_end - stage_start))
+echo "✅ TypeScript check passed (${stage_duration}s)" >&2
+
+# Run ESLint
+current_stage=$((current_stage + 1))
+echo "" >&2
+echo "🔧 Stage $current_stage/$total_stages: Running ESLint..." >&2
+stage_start=$(date +%s)
+if ! pnpm lint >&2; then
+    echo "❌ ESLint check failed!" >&2
+    echo "Please fix ESLint errors before committing." >&2
+    exit 1
+fi
+stage_end=$(date +%s)
+stage_duration=$((stage_end - stage_start))
+echo "✅ ESLint check passed (${stage_duration}s)" >&2
+
+# Run Prettier check
+current_stage=$((current_stage + 1))
+echo "" >&2
+echo "🎨 Stage $current_stage/$total_stages: Running Prettier check..." >&2
+stage_start=$(date +%s)
+if ! pnpm format:check >&2; then
+    echo "❌ Prettier check failed!" >&2
+    echo "Run 'pnpm lint:fix' to fix formatting issues." >&2
+    exit 1
+fi
+stage_end=$(date +%s)
+stage_duration=$((stage_end - stage_start))
+echo "✅ Prettier check passed (${stage_duration}s)" >&2
+
+# Run build check
+current_stage=$((current_stage + 1))
+echo "" >&2
+echo "🏗️ Stage $current_stage/$total_stages: Running build check..." >&2
+stage_start=$(date +%s)
+if ! pnpm build >&2; then
+    echo "❌ Build failed!" >&2
+    echo "Please fix build errors before committing." >&2
+    exit 1
+fi
+stage_end=$(date +%s)
+stage_duration=$((stage_end - stage_start))
+echo "✅ Build check passed (${stage_duration}s)" >&2
+
+# End timer
+end_time=$(date +%s)
+total_duration=$((end_time - start_time))
+
+echo "" >&2
+echo "" >&2
+echo "✅ All pre-commit checks passed!" >&2
+echo "⏱️ Total time: ${total_duration}s" >&2
