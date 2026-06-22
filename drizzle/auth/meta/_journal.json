@@ -15,6 +15,13 @@
       "when": 1781614211181,
       "tag": "0001_flawless_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782112611608,
+      "tag": "0002_nebulous_bloodaxe",
+      "breakpoints": true
     }
   ]
 }
